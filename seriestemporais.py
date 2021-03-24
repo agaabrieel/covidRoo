@@ -18,7 +18,7 @@ data_final = hoje
 ontem = hoje - timedelta(days=1)
 
 # Formatando o link dos boletins
-if datetime.now().hour > 18:
+if datetime.now().hour > 17:
     link = link + 'boletim-epidemiologico-' + str(data_final.strftime('%d-%m-%y')) + '/'
 else: link = link + 'boletim-epidemiologico-' + str(ontem.strftime('%d-%m-%y')) + '/'; data_final = ontem
 
