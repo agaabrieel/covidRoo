@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mp
 import matplotlib.dates as mdates
 from bs4 import BeautifulSoup
+from pandas.core.indexing import IndexingError
 import requests
 from datetime import date, datetime, timedelta
 import re
@@ -66,6 +67,18 @@ def util(listA, listB):
         i += 1
     return listaSubtraida
 
+def somaListas(listA, listB):
+
+    listaSomada = list()
+
+    if len(listA) != len(listB):
+        print("Tamanho incompatível")
+    i = 0
+    while i < len(listA):
+        listaSomada.append(listA[i] + listB[i])
+        i += 1
+    return listaSomada
+
 def util2(listA, listB, dif = 1):
 
     listaSubtraida = list()
@@ -126,7 +139,7 @@ def util6(listA, listB):
     
     return listaFinal
 
-def estacionarSerie(serie, dif):
+def util6(serie, dif):
 
     serieEstacionaria = list()
     resultados = adfuller(serie, autolag = 'AIC')
@@ -136,25 +149,49 @@ def estacionarSerie(serie, dif):
         dif += 1
     return serieEstacionaria
 
+def util7(serie, n):
+
+    listaFinal = list()
+    media = int()
+
+    i = 0
+    while i < len(serie):
+        j = 0
+        media = 0
+        while j < n:
+            if i - j >= 0:
+                media += serie[i-j]
+                j += 1
+            else: j+=1; continue
+        if i > 0:
+            media /= j
+        listaFinal.append(media)
+        i += 1
+    return listaFinal
+
 # Para calcular o número de casos ativos de um período t, é necessário subtrair dos casos totais acumulados
 # os casos recuperados e os óbitos até então.
 casosAtivos = util(casosTotais, casosRec)
 casosAtivos = util(casosAtivos, obitos)
+mediaCasosAtivos = util7(casosAtivos, 7)
 obitosDiarios = util2(obitos, obitos)
 internações = util3(casosAtivos, 0.135)
 internaçõesUTI = util3(casosAtivos, 0.054)
 internaçõesEnfermaria = util3(casosAtivos, 0.081)
 leitosEnfermaria = util4(list(datas), 110)
 leitosUTI = util4(list(datas), 31)
+leitosTotais = somaListas(leitosEnfermaria, leitosUTI)
 
 # Inicializa as séries temporais
 serieObitos = pd.Series(data = obitos, index = datas)
 serieCasos = pd.Series(data = casosAtivos, index = datas)
+serieMediaCasosAtivos = pd.Series(data = mediaCasosAtivos, index = datas)
 serieInternações = pd.Series(data = internações, index = datas)
 serieInternaçõesUTI = pd.Series(data = internaçõesUTI, index = datas)
 serieInternaçõesEnfermaria = pd.Series(data = internaçõesEnfermaria, index = datas)
 seriesLeitosEnfermaria = pd.Series(data = leitosEnfermaria, index = datas)
 seriesLeitosUTI = pd.Series(data = leitosUTI, index = datas)
+serieLeitosTotais = pd.Series(data = leitosTotais, index = datas)
 # dados = estacionarSerie(casosAtivos, dif = 1)
 # serieCasosEst = pd.Series(dados, index = datas)
 
@@ -207,23 +244,27 @@ legenda3 = mp.Patch(color = 'red', label = 'Internações em UTI')
 legenda4 = mp.Patch(color = 'orange', label = 'Internações em enfermaria')
 legenda5 = mp.Patch(color = 'blue', label = 'Leitos enfermaria')
 legenda6 = mp.Patch(color = 'blue', label = 'Internações totais')
+legenda7 = mp.Patch(color = 'green', label = 'Média de Casos Ativos (7 dias)')
+legenda8 = mp.Patch(color = 'black', label = 'Vagas totais de leitos')
 
 # legenda3 = mp.Patch(color = 'blue', label = 'Série de casos estacionada')
 
-# Inicia duas figuras, formata a forma do eixo x e inicia um subplot contendo um axe para cada figura
+# Inicia uma figura, formata a forma do eixo x e inicia um subplot contendo um axe
 fig1 = plt.figure(1, figsize = (10, 8))
 plot1 = fig1.add_subplot(111)
 fig1.autofmt_xdate(rotation=30)
 
 # Dá os títulos, legendas e plota
 plot1.set_title("Casos ao longo do tempo")
-plot1.legend(handles = [legenda0, legenda1, legenda6], loc = 0)
+plot1.legend(handles = [legenda0, legenda1, legenda6, legenda7, legenda8], loc = 0)
 plot1.set_ylabel("Pessoas")
 plot1.set_xlabel("Data")
 plot1.fmt_xdata = mdates.DateFormatter('%d-%m-%y')
 plot1.plot(serieObitos, color = 'red')
 plot1.plot(serieCasos, color = 'orange')
 plot1.plot(serieInternações, color = 'blue')
+plot1.plot(serieMediaCasosAtivos, color = 'green')
+plot1.plot(serieLeitosTotais, '--', color = 'black')
 fig1.savefig('covidroo.jpg')
 
 # Inicia uma figura com um subplot
