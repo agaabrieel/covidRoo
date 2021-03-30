@@ -46,15 +46,7 @@ dados = padrao.findall(conteudo)
 data_final = data_final.strftime('%Y%m%d')
 datas = pd.date_range(start = "20200514", end = data_final, freq = "D")
 
-# Finalmente, os dados através de list comprehensions
-# O formato usado separa os dados encontrandos em ',' e mapeia cada entrada da lista separada a um inteiro
-# Os índices 0 a 2 e 7 a (len(dados)-2) simplesmente ignora as entradas desnecessárias dos dados encontrados ('data:', '[' e ']')
-casosTotais = [int(s) for s in dados[0][7:len(dados[0])-1].split(',')]
-casosRec = [int(s) for s in dados[1][7:len(dados[1])-1].split(',')]
-obitos = [int(s) for s in dados[2][7:len(dados[2])-1].split(',')]
-
-
-# A função a seguir faz subtração entre arrays do mesmo tamanho
+# As funções a seguir são utilitárias usadas para tratar os dados
 def util(listA, listB):
 
     listaSubtraida = list()
@@ -81,17 +73,17 @@ def somaListas(listA, listB):
 
 def util2(listA, listB, dif = 1):
 
-    listaSubtraida = list()
+    listaFinal = list()
 
     if len(listA) != len(listB):
         print("Tamanho incompatível")
     i = 0
     while i < len(listA):
-        if i >= dif:
-            listaSubtraida.append(listA[i] - listB[i-dif])
+        if (i - dif) >= 0:
+            listaFinal.append(listA[i] - listB[i-dif])
             i += 1
-        else: listaSubtraida.append(0); i+= 1
-    return listaSubtraida
+        else: listaFinal.append(0); i+= 1
+    return listaFinal
 
 def util3(listA, n):
     
@@ -169,11 +161,19 @@ def util7(serie, n):
         i += 1
     return listaFinal
 
+# Finalmente, os dados através de list comprehensions
+# O formato usado separa os dados encontrandos em ',' e mapeia cada entrada da lista separada a um inteiro
+# Os índices 0 a 2 e 7 a (len(dados)-2) simplesmente ignora as entradas desnecessárias dos dados encontrados ('data:', '[' e ']')
+casosTotais = [int(s) for s in dados[0][7:len(dados[0])-1].split(',')]
+casosRec = [int(s) for s in dados[1][7:len(dados[1])-1].split(',')]
+obitos = [int(s) for s in dados[2][7:len(dados[2])-1].split(',')]
+
 # Para calcular o número de casos ativos de um período t, é necessário subtrair dos casos totais acumulados
 # os casos recuperados e os óbitos até então.
 casosAtivos = util(casosTotais, casosRec)
 casosAtivos = util(casosAtivos, obitos)
-mediaCasosAtivos = util7(casosAtivos, 7)
+novosCasos = util2(casosTotais, casosTotais)
+mediaCasosAtivos = util7(casosAtivos, 5)
 obitosDiarios = util2(obitos, obitos)
 internações = util3(casosAtivos, 0.135)
 internaçõesUTI = util3(casosAtivos, 0.054)
@@ -184,7 +184,9 @@ leitosTotais = somaListas(leitosEnfermaria, leitosUTI)
 
 # Inicializa as séries temporais
 serieObitos = pd.Series(data = obitos, index = datas)
+serieObitosDiarios = pd.Series(data = obitosDiarios, index = datas)
 serieCasos = pd.Series(data = casosAtivos, index = datas)
+serieNovosCasos = pd.Series(data = novosCasos, index = datas)
 serieMediaCasosAtivos = pd.Series(data = mediaCasosAtivos, index = datas)
 serieInternações = pd.Series(data = internações, index = datas)
 serieInternaçõesUTI = pd.Series(data = internaçõesUTI, index = datas)
@@ -246,6 +248,8 @@ legenda5 = mp.Patch(color = 'blue', label = 'Leitos enfermaria')
 legenda6 = mp.Patch(color = 'blue', label = 'Internações totais')
 legenda7 = mp.Patch(color = 'green', label = 'Média de Casos Ativos (7 dias)')
 legenda8 = mp.Patch(color = 'black', label = 'Vagas totais de leitos')
+legenda9 = mp.Patch(color = 'green', label = 'Novos casos')
+legenda10 = mp.Patch(color = 'red', label = 'Óbitos diários')
 
 # legenda3 = mp.Patch(color = 'blue', label = 'Série de casos estacionada')
 
@@ -254,7 +258,7 @@ fig1 = plt.figure(1, figsize = (10, 8))
 plot1 = fig1.add_subplot(111)
 fig1.autofmt_xdate(rotation=30)
 
-# Dá os títulos, legendas e plota
+# Dá os títulos, legendas, plota e salva
 plot1.set_title("Casos ao longo do tempo")
 plot1.legend(handles = [legenda0, legenda1, legenda6, legenda7, legenda8], loc = 0)
 plot1.set_ylabel("Pessoas")
@@ -272,9 +276,9 @@ fig2 = plt.figure(2, figsize = (10, 8))
 plot2 = fig2.add_subplot(111)
 fig2.autofmt_xdate(rotation=30)
 
-# Dá os títulos, legendas e plota
+# Dá os títulos, legendas, plota e salva
 plot2.set_title('Internações vs. Leitos')
-plot2.legend(handles = [legenda2, legenda3, legenda4, legenda5], loc = 0)
+plot2.legend(handles = [legenda2, legenda3, legenda4, legenda5, legenda9], loc = 0)
 plot2.set_ylabel('Pessoas/vagas')
 plot2.set_xlabel("Data")
 plot2.fmt_xdata = mdates.DateFormatter('%d-%m-%y')
@@ -283,6 +287,21 @@ plot2.plot(serieInternações*0.6, '-', color = 'orange')
 plot2.plot(serieInternações*util5(internações, 31), '--', color = 'black')
 plot2.plot(serieInternações*util5(internações, 110), '--', color = 'blue')
 fig2.savefig('internações.jpg')
+
+# Inicia uma figura com um subplot
+fig3 = plt.figure(3, figsize = (10, 8))
+plot3 = fig3.add_subplot(111)
+fig3.autofmt_xdate(rotation=30)
+
+# Dá os títulos, legendas, plota e salva
+plot3.set_title("Novos Casos e Óbitos diários")
+plot3.legend(handles = [legenda9, legenda10], loc = 0)
+plot3.set_ylabel("Pessoas")
+plot3.set_xlabel("Data")
+plot3.fmt_xdata = mdates.DateFormatter('%d-%m-%y')
+plot3.plot(serieNovosCasos, color = 'green')
+plot3.plot(serieObitosDiarios, color = 'red')
+fig3.savefig('novosCasos.jpg')
 
 # Exibe os gráficos
 plt.show()
